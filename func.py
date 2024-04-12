@@ -1,11 +1,19 @@
 
 import pandas as pd
+import os
 
-path_train = './train_heart.csv'
-path_test = './test_heart.csv'
 
-def get_data(train_path,test_path,col):
+def get_data():
 
+    #Gets path to folder
+    path = os.getcwd()
+    train_path = path + '/train_heart.csv'
+    test_path = path + '/test_heart.csv'
+
+    #variable for the categorical data columns in the dataset
+    col = ['sex','cp','fbs','restecg','exang','slope','ca','thal']
+
+    # Load Data
     df_train = pd.read_csv(train_path)
     df_test = pd.read_csv(test_path)
 
