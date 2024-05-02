@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 
-def get_data():
+def get_data(hierar = False):
 
     #Gets path to folder
     path = os.getcwd()
@@ -12,10 +12,17 @@ def get_data():
 
     #variable for the categorical data columns in the dataset
     col = ['sex','cp','fbs','restecg','exang','slope','ca','thal']
-
+    print(col)
     # Load Data
     df_train = pd.read_csv(train_path)
     df_test = pd.read_csv(test_path)
+
+    if hierar:
+        age_train = df_train['age']
+        age_test= df_test['age']
+        age = [age_train, age_test ]
+    else: 
+        age = []
 
     # One hot encode data: 
     OHE_train = pd.get_dummies(df_train,columns=col)
@@ -44,5 +51,5 @@ def get_data():
     X_test[:,0:5] = X_train_temp
   
 
-    return [X_train,y_train,X_test,y_test]
+    return [X_train,y_train,X_test,y_test,age]
 
