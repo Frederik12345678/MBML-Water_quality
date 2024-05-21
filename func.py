@@ -15,7 +15,7 @@ def get_data(hierar = False, oneHot = False):
 
     #variable for the categorical data columns in the dataset
     col = ['sex','cp','fbs','restecg','exang','slope','ca','thal']
-    print(col)
+    #print(col)
     # Load Data
     df_train = pd.read_csv(train_path)
     df_test = pd.read_csv(test_path)
@@ -31,10 +31,12 @@ def get_data(hierar = False, oneHot = False):
         # One hot encode data: 
         X_train = pd.get_dummies(df_train,columns=col)
         X_test = pd.get_dummies(df_test,columns=col)
-
+        
         #Extract y values:
         y_train = X_train['target'].values.astype("int")
         y_test = X_test['target'].values.astype("int")
+
+        names = list(X_train.drop("target", axis='columns').columns)
 
         #Extract data 
         X_train = X_train.loc[:, X_train.columns != 'target'].values
@@ -60,6 +62,8 @@ def get_data(hierar = False, oneHot = False):
         #Extract y values:
         y_train = X_train['target'].values.astype("int")
         y_test = X_test['target'].values.astype("int")
+        
+        names = list(X_train.drop("target", axis='columns').columns)
 
         #Extract data 
         X_train = X_train.loc[:, X_train.columns != 'target'].values
@@ -80,10 +84,11 @@ def get_data(hierar = False, oneHot = False):
         X_test = X_train_temp
   
 
-    return [X_train,y_train,X_test,y_test,age]
+    return [X_train,y_train,X_test,y_test,age,names]
 
 sigmoid = lambda x: 1./(1+np.exp(-x))
 probit = lambda x: norm.cdf(x)
+
 class BernoulliLikelihood(object):
     """ Implement the Bernoulli likelihood with the sigmoid as inverse link function """
     
@@ -362,6 +367,23 @@ class GaussianProcessClassification(object):
         assert (p.shape == (len(Xstar),)), f"Expected shape for p is ({len(Xstar)}), but the actual shape was {p.shape}. Please check implementation"
         return p
     
+    def generate_samples(mean, K, M, jitter=1e-8):
+        """ returns M samples from a zero-mean Gaussian process with kernel matrix K
+        
+        arguments:
+        K      -- NxN kernel matrix
+        M      -- number of samples (scalar)
+        jitter -- scalar
+        returns NxM matrix
+        """
+        
+        L = np.linalg.cholesky(K + jitter*np.identity(len(K)))
+        zs = np.random.normal(0, 1, size=(len(K), M))
+        fs = mean + np.dot(L, zs)
+        return fs
+    
+
+
     def posterior_samples(self, Xstar, num_samples):
         """
             generate samples from the posterior p(f^*|y, x^*) for each of the inputs in Xstar
@@ -373,12 +395,33 @@ class GaussianProcessClassification(object):
                 f_samples        -- numpy array of (P, num_samples) containing num_samples for each of the P inputs in Xstar
         """
         mu, Sigma = self.predict_f(Xstar)
-        f_samples = generate_samples(mu.ravel(), Sigma, num_samples)
+        f_samples = self.generate_samples(mu.ravel(), Sigma, num_samples)
 
         assert (f_samples.shape == (len(Xstar), num_samples)), f"The shape of the posterior mu seems wrong. Expected ({len(Xstar)}, {num_samples}), but actual shape was {f_samples.shape}. Please check implementation"
         return f_samples
 
 
+def plot_with_uncertainty(ax, Xp, gp, color='r', color_samples='b', title="", num_samples=0,Xstar=[]):
+    
+    mu, Sigma = gp.predict_y(Xp)
+    mean = mu.ravel()
+    std = np.sqrt(np.diag(Sigma))
+
+    # plot distribution
+    ax.plot(Xp, mean, color=color, label='Mean')
+    ax.plot(Xp, mean + 2*std, color=color, linestyle='--')
+    ax.plot(Xp, mean - 2*std, color=color, linestyle='--')
+    ax.fill_between(Xp.ravel(), mean - 2*std, mean + 2*std, color=color, alpha=0.25, label='95% interval')
+    
+    # generate samples
+    if num_samples > 0:
+        fs = gp.posterior_samples(Xstar, num_samples)
+        ax.plot(Xp, fs[:,0], color=color_samples, alpha=.25, label="$f(x)$ samples")
+        ax.plot(Xp, fs[:, 1:], color=color_samples, alpha=.25)
+    
+    ax.set_title(title)
+
+"""
 [Xtrain,ytrain,Xtest,ytest,age] = get_data(False,True)
 print(Xtrain.shape)
 
@@ -401,3 +444,4 @@ print('Test error:\t%3.2f (%3.2f)' % compute_err(ytest_hat.ravel(), ytest.ravel(
 # evaluate prediction accuracy
 print("Accuracy Train:", 1.0*np.sum(ytrain_hat == ytrain) / len(ytrain))
 print("Accuracy Test:", 1.0*np.sum(ytest_hat == ytest) / len(ytest))
+"""
