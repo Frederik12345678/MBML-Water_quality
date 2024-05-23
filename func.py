@@ -21,8 +21,8 @@ def get_data(hierar = False, oneHot = False):
     df_test = pd.read_csv(test_path)
 
     if hierar:
-        age_train = df_train['age']
-        age_test= df_test['age']
+        age_train = df_train['sex']
+        age_test= df_test['sex']
         age = [age_train, age_test ]
     else: 
         age = []
